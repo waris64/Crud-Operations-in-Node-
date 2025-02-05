@@ -8,13 +8,14 @@ const userModel = require('./models/user');
 const bcrypt = require('bcrypt');
 const cookieParser = require('cookie-parser');
 const user = require('./models/user');
+const { runInNewContext } = require('vm');
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
 app.use(cookieParser());
 app.set('view engine', 'ejs');
 app.get('/', (req, res) => {
-    res.render('register');
+    res.redirect('posts');
 })
 
 // Register setup
@@ -51,7 +52,7 @@ app.post('/register', async (req, res) => {
 
 async function isLoggedIn(req, res, next) {
     if (!req.cookies || !req.cookies.token) {
-        return res.send("Token required")
+        return res.redirect('/login')
     }
     try {
         let data = jwt.verify(req.cookies.token, 'shhhh');
@@ -71,17 +72,14 @@ app.get('/login', (req, res) => {
 
 app.post('/login', async (req, res) => {
     const { email, password } = req.body;
-    console.log("email : ", email)
     const user = await userModel.findOne({ email });
     if (!user) return res.status(400).send("User Not Founnd")
 
     bcrypt.compare(password, user.password, (err, result) => {
-        console.log("result :", result)
         if (result) {
             const token = jwt.sign({ email: user.email, user: user._id, name: user.name }, 'shhhh')
-            console.log("Token : ", token)
             res.cookie("token", token)
-            return res.redirect('/dashboard')
+            return res.redirect('/profile')
         } else {
             return res.redirect('/login')
         }
@@ -97,22 +95,83 @@ app.post('/login', async (req, res) => {
 
 app.get('/logout', (req, res) => {
     res.cookie("token", "");
-    res.redirect('/')
+    res.redirect('/profile')
 })
 
 //Profile Route 
 
 app.get('/profile', isLoggedIn, async (req, res) => {
-    try {
-        console.log("Data from token : ", req.user);
-        
-        res.render('profile', { name: req.user.name });
-    } catch (error) {
-        return res.send("error in profile catch part : ", userData)
-    }
-
+    const user = await userModel.findOne({ email: req.user.email }).populate("posts");
+    res.render("profile", { user })
 })
 
+
+//Post creation
+
+app.post('/post', isLoggedIn, async (req, res) => {
+    try {
+        let user = await userModel.findOne({ email: req.user.email });
+        console.log("User data from post request : ", user);
+
+        //save it in db
+
+        let newPost = await postModel.create(
+            {
+                content: req.body.content,
+                user: user._id
+            });
+        //user ky array main push krien post ko 
+        user.posts.push(newPost._id);
+        await user.save();
+        // await user.populate('posts');
+        // res.render('profile', { user });
+        res.redirect('/posts')
+    } catch (error) {
+        console.error(error)
+    }
+})
+
+// All posts page 
+
+app.get('/posts', isLoggedIn, async (req, res) => {
+    const allPosts = await postModel.find().populate('user', 'name');
+
+    // console.log("All posts : ", allPosts.reverse())
+    res.render('posts', { allPosts })
+})
+
+// Delete the posts
+
+app.get('/delete/:id', async (req, res) => {
+    const delPost = await postModel.findOne({_id:req.params.id});
+    console.log("post for deletion: ", delPost)
+    let  deletedPost = await postModel.findByIdAndDelete(delPost);
+    return res.redirect('/profile');
+})
+
+//Like feature
+
+app.get('/like/:id', isLoggedIn, async (req, res) => {
+    let post = await postModel.findOne({ _id: req.params.id }).populate('user');
+    console.log("USer data : ", post)
+    if (post.likes.indexOf(req.user._id) === -1) {
+        post.likes.push(req.user.id);
+    } else {
+        post.likes.splice(post.likes.indexOf(req.user.userId), 1)
+    }
+    console.log(req.params.id);
+
+    await post.save();
+    if (post) console.log("Liked");
+    res.redirect('/profile')
+})
+
+
+//Edit the post 
+app.post('/edit/:id',async(req,res)=>{
+    const post = await postModel.findOne({_id:req.params.id}).populate('user');
+    return res.render('edit')
+})
 app.listen(3000, () => {
     console.log("listening at 3000");
 

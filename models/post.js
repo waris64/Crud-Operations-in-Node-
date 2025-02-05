@@ -3,7 +3,7 @@ const postSchema = mongoose.Schema({
     user: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'user'
-    },
+    },  
     data:{
         type:Date,
         default:Date.now

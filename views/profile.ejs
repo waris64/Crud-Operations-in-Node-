@@ -1,12 +1,50 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
     <title>Profile</title>
-</head>
-<body>
-    <h1>Profile Page</h1>
-    <p>Welcome <%= name %></p>
-</body>
+  </head>
+  <body class="bg-zinc-700 text-white px-4">
+    <div class="flex justify-end">
+      <button class="bg-red-400 px-4 py-2 rounded">
+        <a href="/logout">Logout</a>
+      </button>
+    </div>
+
+    <p class="text-2xl">Welcome</p>
+    <p>You can now post</p>
+
+    <form action="/post" method="POST">
+      <textarea
+        name="content"
+        class="px-7 py-2 border rounded block mb-2 resize-none w-1/2"
+        placeholder="What's in your mind?"
+      ></textarea>
+      <button type="submit" class="bg-blue-400 px-8 py-2 my-2 cursor-pointer">
+        Submit
+      </button>
+    </form>
+
+    <p class="mb-2">Your posts</p>
+
+    <div class="p-3 w-1/2 rounded">
+      <% user.posts.reverse().forEach(function(post) { %>
+      <div class="mb-2 border p-4 rounded bg-zinc-900">
+        <p class="text-white"><%= post.content %></p>
+        <div class="flex space-x-4 flex-col">
+          <p><%= post.likes.length%> likes</p>
+          <div>
+              <a class="text-blue-400" href="/like/<%= post._id %>">
+                <%= post.likes.indexOf(user._id) === -1 ? "like":"unlike"%>
+              </a>
+            <a href="/edit/<%= post._id %>" class="text-zinc-400">Edit</a>
+            <a href="/delete/<%= post._id %>" class="text-zinc-400">Delete</a>
+          </div>
+        </div>
+      </div>
+      <% }); %>
+    </div>
+  </body>
 </html>
