@@ -12,11 +12,15 @@
         <a href="/logout">Logout</a>
       </button>
     </div>
-
-    <p class="text-2xl">Welcome</p>
+    <div class="flex gap-3 mb-2">
+      <div class="w-10 h-10 border border-2 rounded-3xl overflow-hidden ">
+        <img src="/images/uploads/<%=user.profilepic%>" alt="" />
+      </div>
+      <p class="text-2xl">Welcome <%=user.name%></p>
+    </div>
     <p>You can now post</p>
 
-    <form action="/post" method="POST">
+    <form action="/edit/:id" method="POST">
       <textarea
         name="content"
         class="px-7 py-2 border rounded block mb-2 resize-none w-1/2"
@@ -36,9 +40,9 @@
         <div class="flex space-x-4 flex-col">
           <p><%= post.likes.length%> likes</p>
           <div>
-              <a class="text-blue-400" href="/like/<%= post._id %>">
-                <%= post.likes.indexOf(user._id) === -1 ? "like":"unlike"%>
-              </a>
+            <a class="text-blue-400" href="/like/<%= post._id %>">
+              <%= post.likes.indexOf(user._id) === -1 ? "like":"unlike"%>
+            </a>
             <a href="/edit/<%= post._id %>" class="text-zinc-400">Edit</a>
             <a href="/delete/<%= post._id %>" class="text-zinc-400">Delete</a>
           </div>

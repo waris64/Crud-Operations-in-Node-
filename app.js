@@ -8,15 +8,13 @@ const userModel = require('./models/user');
 const bcrypt = require('bcrypt');
 const cookieParser = require('cookie-parser');
 const user = require('./models/user');
-const { runInNewContext } = require('vm');
+const upload = require("./config/multerConfig")
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
 app.use(cookieParser());
 app.set('view engine', 'ejs');
-app.get('/', (req, res) => {
-    res.redirect('posts');
-})
+
 
 // Register setup
 
@@ -46,6 +44,23 @@ app.post('/register', async (req, res) => {
         })
     })
 
+})
+// register get route 
+app.get("/register", (req, res) => {
+    res.render('register');
+})
+
+//profile picture route
+
+app.get('/profile/upload', (req, res) => {
+    res.render('profileUpload')
+});
+// Upload images route
+app.post("/upload", isLoggedIn, upload.single('image'), async (req, res) => {
+    const user = await userModel.findOne({ email: req.user.email });
+    user.profilepic = req.file.filename;
+    await user.save();
+    res.redirect('/profile')
 })
 
 // Creating middleware 
@@ -120,7 +135,8 @@ app.post('/post', isLoggedIn, async (req, res) => {
                 content: req.body.content,
                 user: user._id
             });
-        //user ky array main push krien post ko 
+        //push the post into user array
+
         user.posts.push(newPost._id);
         await user.save();
         // await user.populate('posts');
@@ -128,6 +144,7 @@ app.post('/post', isLoggedIn, async (req, res) => {
         res.redirect('/posts')
     } catch (error) {
         console.error(error)
+        return res.status(500).json({error:error})
     }
 })
 
@@ -143,9 +160,9 @@ app.get('/posts', isLoggedIn, async (req, res) => {
 // Delete the posts
 
 app.get('/delete/:id', async (req, res) => {
-    const delPost = await postModel.findOne({_id:req.params.id});
+    const delPost = await postModel.findOne({ _id: req.params.id });
     console.log("post for deletion: ", delPost)
-    let  deletedPost = await postModel.findByIdAndDelete(delPost);
+    let deletedPost = await postModel.findByIdAndDelete(delPost);
     return res.redirect('/profile');
 })
 
@@ -159,7 +176,7 @@ app.get('/like/:id', isLoggedIn, async (req, res) => {
     } else {
         post.likes.splice(post.likes.indexOf(req.user.userId), 1)
     }
-    console.log(req.params.id);
+    console.log('user id in params : ', req.params.id);
 
     await post.save();
     if (post) console.log("Liked");
@@ -168,11 +185,19 @@ app.get('/like/:id', isLoggedIn, async (req, res) => {
 
 
 //Edit the post 
-app.post('/edit/:id',async(req,res)=>{
-    const post = await postModel.findOne({_id:req.params.id}).populate('user');
-    return res.render('edit')
+app.get('/edit/:id', isLoggedIn, async (req, res) => {
+    let post = await postModel.findOne({ _id: req.params.id }).populate('user');
+    return res.render('edit', { post })
 })
+// Update the post 
+
+app.post('/update/:id', isLoggedIn, async (req, res) => {
+    const post = await postModel.findOneAndUpdate({ _id: req.params.id }, { content: req.body.content }, { new: true });
+    res.redirect('/profile')
+})
+
+
 app.listen(3000, () => {
     console.log("listening at 3000");
 
-})
+}) 
